@@ -43,9 +43,14 @@ function addNewNote(text = "") {
     
     GLOBAL.editBtn   = $('<button><i class="fas fa-edit"></i></button>').addClass('edit').click( (event) => {
                                                                                                     
-                                                                                                    let targetMain     = $(event.currentTarget).parent().parent().find('.main');
-                                                                                                    let targetTextArea = $(event.currentTarget).parent().parent().find('textarea');
-                                                                                                    GLOBAL.editBtnIcon = $(event.currentTarget).parent().parent().find('.edit').find('i');
+                                                                                                    //let targetMain     = $(event.currentTarget).parent().parent().find('.main');
+                                                                                                    let targetMain     = $('.main', $(event.currentTarget).parent().parent());
+                                                                                                    
+                                                                                                    //let targetTextArea = $(event.currentTarget).parent().parent().find('textarea');
+                                                                                                    let targetTextArea = $('textarea', $(event.currentTarget).parent().parent());
+                                                                                                    
+                                                                                                    //GLOBAL.editBtnIcon = $(event.currentTarget).parent().parent().find('i');
+                                                                                                    GLOBAL.editBtnIcon = $('i', $(event.currentTarget).parent().parent());
                                                                                                     
                                                                                                     $(GLOBAL.editBtnIcon).toggleClass('fa-save fa-edit');
                                                                                                     
