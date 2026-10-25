@@ -1,141 +1,157 @@
-let GLOBAL = {};
+// Notes App: bloco de notas simples feito com jQuery.
+// As notas são guardadas no localStorage como uma lista de textos.
 
-const pai         = null;
-const addBtn      = null;
-const notes       = null;
-const note        = null;
-const editBtn     = null;
-const editBtnIcon = null;
-const deleteBtn   = null;
-const main        = null;
-const textArea    = null;
+const CHAVE_STORAGE = 'notes';
 
-$(document).ready(function() {
-    
-    GLOBAL.pai      = $('body').html('');
-    GLOBAL.addBtn   = $('<button>').attr('id', 'add').html('<i class="fas fa-plus"></i> Nova Nota').click( () => {
-                                                                                                                addNewNote();        
-                                                                                                              });
-    GLOBAL.notes    = JSON.parse(localStorage.getItem("notes"));
-    
-    //******************//
-    
-    $(GLOBAL.pai).append($(GLOBAL.addBtn));
-    
-    //******************//
-    
-    // Get notes in the Local Storage
-    if ($(GLOBAL.notes)) {
-        
-        let notesData = $(GLOBAL.notes);
-        
-        [...notesData].forEach((note) => {
-            addNewNote(note);
+// Notas mostradas na primeira visita (quando ainda não há nada salvo)
+const NOTAS_EXEMPLO = [
+    'Bem-vindo ao Notes App!\n\nClique no lápis para editar uma nota e no disquete para salvar.',
+    'Lista de compras\n- Café\n- Pão\n- Frutas',
+    'Atalhos de teclado\nCtrl+Enter ou Esc: terminar a edição\nDuplo clique no texto: editar'
+];
+
+$(function () {
+    carregarNotas().forEach(function (texto) {
+        criarNota(texto, false);
+    });
+    atualizarVazio();
+
+    $('#add').on('click', function () {
+        criarNota('', true);
+        atualizarVazio();
+    });
+
+    $('#exemplos').on('click', function () {
+        NOTAS_EXEMPLO.forEach(function (texto) {
+            criarNota(texto, false);
         });
-        
-    }// if ($(GLOBAL.notes))
-    
+        atualizarVazio();
+        $('#add').trigger('focus');
+    });
 });
 
-//******************//
+// Lê as notas salvas. Na primeira visita usa as notas de exemplo.
+// Se o localStorage estiver bloqueado ou com dados inválidos,
+// também cai nos exemplos em vez de quebrar a página.
+function carregarNotas() {
+    try {
+        const salvo = localStorage.getItem(CHAVE_STORAGE);
+        if (salvo === null) {
+            return NOTAS_EXEMPLO;
+        }
+        const dados = JSON.parse(salvo);
+        return Array.isArray(dados) ? dados.filter((t) => typeof t === 'string') : NOTAS_EXEMPLO;
+    } catch (erro) {
+        return NOTAS_EXEMPLO;
+    }
+}
 
-function addNewNote(text = "") {
-    
-    GLOBAL.editBtn   = $('<button><i class="fas fa-edit"></i></button>').addClass('edit').click( (event) => {
-                                                                                                    
-                                                                                                    //let targetMain     = $(event.currentTarget).parent().parent().find('.main');
-                                                                                                    let targetMain     = $('.main', $(event.currentTarget).parent().parent());
-                                                                                                    
-                                                                                                    //let targetTextArea = $(event.currentTarget).parent().parent().find('textarea');
-                                                                                                    let targetTextArea = $('textarea', $(event.currentTarget).parent().parent());
-                                                                                                    
-                                                                                                    //GLOBAL.editBtnIcon = $(event.currentTarget).parent().parent().find('i');
-                                                                                                    GLOBAL.editBtnIcon = $('i', $(event.currentTarget).parent().parent());
-                                                                                                    
-                                                                                                    $(GLOBAL.editBtnIcon).toggleClass('fa-save fa-edit');
-                                                                                                    
-                                                                                                    targetMain.toggle("hidden");
-                                                                                                    targetTextArea.toggle("hidden"); 
-                                                                                                        
-                                                                                                  });
-    GLOBAL.deleteBtn = $('<button><i class="fas fa-trash-alt"></i></button>').addClass('delete').click( (event) => {
-        
-                                                                                                    let note = $(event.currentTarget).parent().parent().parent();
-                                                                                                    
-                                                                                                    note.remove();
-                                                                                                    updateLS();
-                                                                                                    
-                                                                                                  });
-    GLOBAL.main      = $('<div>').addClass('main');//.addClass('hidden');
-    GLOBAL.textArea  = $('<textarea>').change( (event) => {
-                                                
-                                                let value = $(event.currentTarget).val();
-                                                
-                                                $(event.currentTarget).parent().find('.main').html(marked(value));
-                                                
-                                                updateLS();
-                                                
-                                             }).addClass('hidden');
-    
-    //******************//
-    
-    GLOBAL.note = $('<div>').addClass('note').append(
-        $('<div>').addClass('notes').append(
-            $('<div>').addClass('tools').append(
-                $(GLOBAL.editBtn),
-                $(GLOBAL.deleteBtn)
-            ),
-            $(GLOBAL.main),
-            $(GLOBAL.textArea)
-        )
-    );
-    
-    //******************//
-    
-    // Get previous saved text
-    if (text) {
-        
-        $(GLOBAL.main).html(marked(text));
-        $(GLOBAL.textArea).val(text);
-    
-        //$(GLOBAL.main).toggle("hidden");
-        $(GLOBAL.textArea).toggle("hidden");
-        
-    } else {
-        
-        $(GLOBAL.main).toggle("hidden");
-        //$(GLOBAL.textArea).toggle("hidden");
-        
-        $(GLOBAL.textArea).removeClass('hidden');
-        
-        GLOBAL.editBtnIcon = $(GLOBAL.editBtn).find('i');
-        
-        $(GLOBAL.editBtnIcon).toggleClass('fa-save fa-edit');
-        
-    }// else if (text)
-    
-    
-    //******************//
-    
-    $(GLOBAL.pai).append(
-        $(GLOBAL.note)
-    );
-    
-    
-}//function addNewNote(text = "")
+// Salva o texto de todas as notas, na ordem em que aparecem na tela.
+function salvarNotas() {
+    const textos = $('#notas textarea').map(function () {
+        return $(this).val();
+    }).get();
 
-function updateLS() {
-    
-    let notesText = $(GLOBAL.pai).find('textarea');
-    let notes     = [];
-        
-    [...notesText].forEach( (note) => {
-        notes.push(note.value);
+    try {
+        localStorage.setItem(CHAVE_STORAGE, JSON.stringify(textos));
+    } catch (erro) {
+        mostrarAviso('Não foi possível salvar neste navegador.');
+    }
+}
+
+// Cria o elemento de uma nota e coloca na tela.
+// emEdicao = true abre a nota já com o campo de texto em foco.
+function criarNota(texto, emEdicao) {
+    const $nota = $('<article>').addClass('nota');
+
+    const $editar = $('<button type="button">').addClass('editar');
+    const $remover = $('<button type="button">')
+        .addClass('remover')
+        .attr({ 'aria-label': 'Remover nota', title: 'Remover nota' })
+        .append($('<i>').addClass('fas fa-trash-alt').attr('aria-hidden', 'true'));
+
+    // .text() mostra o conteúdo como texto puro: "<b>x</b>" aparece literalmente
+    const $conteudo = $('<div>').addClass('conteudo').text(texto);
+    const $campo = $('<textarea>')
+        .attr({ 'aria-label': 'Texto da nota', placeholder: 'Escreva sua nota...' })
+        .val(texto);
+
+    $nota.append(
+        $('<div>').addClass('ferramentas').append($editar, $remover),
+        $conteudo,
+        $campo
+    );
+
+    $editar.on('click', function () {
+        alternarEdicao($nota, !$nota.hasClass('editando'));
     });
-    
-    localStorage.setItem("notes", JSON.stringify(notes));
-    
-}// function updateLS()
 
+    // Clicar duas vezes no texto também abre a edição
+    $conteudo.on('dblclick', function () {
+        alternarEdicao($nota, true);
+    });
 
+    // Salva enquanto digita, assim nada se perde ao recarregar
+    $campo.on('input', function () {
+        $conteudo.text($campo.val());
+        salvarNotas();
+    });
 
+    // Atalhos: Ctrl+Enter ou Esc terminam a edição
+    $campo.on('keydown', function (evento) {
+        if (evento.key === 'Escape' || (evento.key === 'Enter' && (evento.ctrlKey || evento.metaKey))) {
+            evento.preventDefault();
+            alternarEdicao($nota, false);
+            $editar.trigger('focus');
+        }
+    });
+
+    $remover.on('click', function () {
+        $nota.remove();
+        salvarNotas();
+        atualizarVazio();
+        mostrarAviso('Nota removida.');
+        $('#add').trigger('focus');
+    });
+
+    $('#notas').append($nota);
+    alternarEdicao($nota, emEdicao);
+    salvarNotas();
+}
+
+// Liga ou desliga o modo de edição de uma nota.
+function alternarEdicao($nota, editando) {
+    const $editar = $nota.find('.editar');
+    const rotulo = editando ? 'Salvar nota' : 'Editar nota';
+    const estavaEditando = $nota.hasClass('editando');
+
+    $nota.toggleClass('editando', editando);
+    $editar
+        .attr({ 'aria-label': rotulo, title: rotulo })
+        .empty()
+        .append($('<i>').addClass(editando ? 'fas fa-save' : 'fas fa-edit').attr('aria-hidden', 'true'));
+
+    if (editando) {
+        $nota.find('textarea').trigger('focus');
+    } else if (estavaEditando) {
+        salvarNotas();
+        mostrarAviso('Nota salva.');
+    }
+}
+
+// Mostra a mensagem de lista vazia quando não há notas.
+function atualizarVazio() {
+    $('#vazio').prop('hidden', $('#notas .nota').length > 0);
+}
+
+// Mostra uma mensagem curta no canto da tela por alguns segundos.
+let temporizadorAviso = null;
+function mostrarAviso(mensagem) {
+    const $aviso = $('#aviso');
+    $aviso.text(mensagem).addClass('visivel');
+
+    clearTimeout(temporizadorAviso);
+    temporizadorAviso = setTimeout(function () {
+        $aviso.removeClass('visivel');
+    }, 2000);
+}
